@@ -40,6 +40,9 @@ const userSchema: Schema<IUser> = new Schema({
         type: Boolean,
         default: true,
     },
+    lastLogin: {
+        type: Date,
+    },
 }, { timestamps: true });
 
 userSchema.pre("save", async function () {

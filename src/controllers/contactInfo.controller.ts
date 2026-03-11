@@ -42,7 +42,7 @@ export const updateContactInfo = async (req: Request, res: Response, next: NextF
         if (contactInfo) {
             // Update existing
             contactInfo = await ContactInfoModel.findByIdAndUpdate(contactInfo._id, req.body, {
-                new: true,
+                returnDocument: 'after',
                 runValidators: true,
             });
         } else {

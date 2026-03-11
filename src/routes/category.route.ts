@@ -1,6 +1,6 @@
 import express from "express";
 import { authorizeRoles, isAuthenticated } from "../middlewares/auth";
-import { createCategory, deleteCategory, getAllCategories, updateCategory } from "../controllers/category.controller";
+import { createCategory, deleteCategory, getAllCategories, updateCategory, updateCategoryOrder } from "../controllers/category.controller";
 
 const categoryRouter = express.Router();
 
@@ -9,6 +9,7 @@ categoryRouter.get("/", getAllCategories);
 
 // Only Staff(1), Admin(2), and Root_Admin(3) can manage categories
 categoryRouter.post("/", isAuthenticated, authorizeRoles([1, 2, 3]), createCategory);
+categoryRouter.put("/reorder", isAuthenticated, authorizeRoles([1, 2, 3]), updateCategoryOrder);
 categoryRouter.patch("/:id", isAuthenticated, authorizeRoles([1, 2, 3]), updateCategory);
 categoryRouter.delete("/:id", isAuthenticated, authorizeRoles([1, 2, 3]), deleteCategory);
 

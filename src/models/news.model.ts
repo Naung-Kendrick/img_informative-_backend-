@@ -9,6 +9,8 @@ export interface INews extends Document {
     author: mongoose.Types.ObjectId; // The User who wrote it
     likes: mongoose.Types.ObjectId[]; // The Users who liked it
     views: number;
+    district?: string;
+    township?: string;
 }
 
 const newsSchema: Schema<INews> = new mongoose.Schema(
@@ -49,6 +51,12 @@ const newsSchema: Schema<INews> = new mongoose.Schema(
         views: {
             type: Number,
             default: 0,
+        },
+        district: {
+            type: String,
+        },
+        township: {
+            type: String,
         }
     },
     { timestamps: true }

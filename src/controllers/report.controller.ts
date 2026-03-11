@@ -42,7 +42,7 @@ export const getAllReports = async (req: Request, res: Response) => {
 export const markAsRead = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const report = await reportModel.findByIdAndUpdate(id, { isRead: true }, { new: true });
+        const report = await reportModel.findByIdAndUpdate(id, { isRead: true }, { returnDocument: 'after' });
         if (!report) {
             return res.status(404).json({ message: 'Report not found' });
         }
@@ -56,7 +56,7 @@ export const updateReportStatus = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
-        const report = await reportModel.findByIdAndUpdate(id, { status }, { new: true });
+        const report = await reportModel.findByIdAndUpdate(id, { status }, { returnDocument: 'after' });
         if (!report) {
             return res.status(404).json({ message: 'Report not found' });
         }

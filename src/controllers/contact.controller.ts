@@ -49,7 +49,7 @@ export const markAsRead = async (req: Request, res: Response, next: NextFunction
         const contact = await ContactMessageModel.findByIdAndUpdate(
             req.params.id,
             { isRead: true },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!contact) {

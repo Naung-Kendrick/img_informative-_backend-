@@ -18,25 +18,19 @@ import authRouter from "./routes/auth.route";
 import statisticRouter from "./routes/statistic.route";
 import contactInfoRouter from "./routes/contactInfo.route";
 import reportRouter from "./routes/report.route";
+import auditLogRouter from "./routes/auditLog.route";
+import faqRouter from "./routes/faq.route";
+import layoutRouter from "./routes/layout.route";
+export const app = express();
 
-const limiter = rateLimit({
-    windowMs: 10 * 60 * 1000,
-    max: 500, // Increased to avoid blocking legitimate users during heavy usage
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
-});
-
-const app = express();
+// 🔌 Standard Express Middleware
 app.use(express.json({ limit: "50mb" }));
 app.use(cors({
     origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:3001", "http://127.0.0.1:5173", "http://127.0.0.1:5174"],
     credentials: true,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    // app.use(cors()) already handles OPTIONS preflight — no need for app.options("*", ...)
-    // which would crash Express 5 (bare * wildcard is not valid in path-to-regexp v8+)
 }));
-app.use(limiter);
 
 const port = process.env.PORT || 3000;
 const dbUrl = process.env.DB_URL || "";
@@ -57,6 +51,9 @@ app.use('/about', aboutRouter);
 app.use('/statistics', statisticRouter);
 app.use('/contact-info', contactInfoRouter);
 app.use('/reports', reportRouter);
+app.use('/api/audit-logs', auditLogRouter);
+app.use('/faqs', faqRouter);
+app.use('/layout', layoutRouter);
 
 app.use('/api/auth', authRouter);
 
@@ -67,9 +64,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     })
 });
 
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-    connectDB(dbUrl);
-});
+if (process.env.NODE_ENV !== "test") {
+    app.listen(port, () => {
+        console.log(`Server is running on http://localhost:${port}`);
+        connectDB(dbUrl as string);
+    });
+}
 
 app.use(ErrorMiddleware);

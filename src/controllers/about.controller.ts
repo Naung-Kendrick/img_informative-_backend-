@@ -19,9 +19,9 @@ export const getAboutContent = async (req: Request, res: Response, next: NextFun
 // ── ADMIN: Create or Update About Content ──────────────────────────────────────────────────
 export const saveAboutContent = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { title, description, policy, objective, imageUrl } = req.body;
+        const { title, description, policy, objective, duty, mainTasks, imageUrl } = req.body;
 
-        if (!title || !description || !policy || !objective) {
+        if (!title || !description || !policy || !objective || !duty || !mainTasks) {
             return next(new ErrorHandler("Please fill out all required fields.", 400));
         }
 
@@ -32,6 +32,8 @@ export const saveAboutContent = async (req: Request, res: Response, next: NextFu
             about.description = description;
             about.policy = policy;
             about.objective = objective;
+            about.duty = duty;
+            about.mainTasks = mainTasks;
             if (imageUrl !== undefined) {
                 about.imageUrl = imageUrl;
             }
@@ -42,6 +44,8 @@ export const saveAboutContent = async (req: Request, res: Response, next: NextFu
                 description,
                 policy,
                 objective,
+                duty,
+                mainTasks,
                 imageUrl: imageUrl || '',
             });
         }

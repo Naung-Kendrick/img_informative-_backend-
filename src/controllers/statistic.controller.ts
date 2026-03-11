@@ -65,7 +65,7 @@ export const getStatisticById = async (req: Request, res: Response, next: NextFu
 // Update an existing Statistic
 export const updateStatistic = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const statistic = await StatisticModel.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        const statistic = await StatisticModel.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after', runValidators: true });
 
         if (!statistic) {
             return next(new ErrorHandler("Statistic not found", 404));

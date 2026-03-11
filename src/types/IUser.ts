@@ -8,6 +8,7 @@ export interface IUser extends Document {
     avatar?: string;
     role: number;
     active: boolean;
+    lastLogin?: Date;
     createdAt: Date;
     updatedAt: Date;
     signAccessToken(): Promise<string>;

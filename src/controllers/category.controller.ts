@@ -20,10 +20,13 @@ export const createCategory = CatchAsyncError(async (req: Request, res: Response
 
     const createdBy = req.user._id.toString();
 
+    const categoryCount = await CategoryModel.countDocuments();
+
     const category = await CategoryModel.create({
         title,
         slug,
         description,
+        order: categoryCount,
         createdBy
     });
 
@@ -35,7 +38,7 @@ export const createCategory = CatchAsyncError(async (req: Request, res: Response
 
 // Get all categories
 export const getAllCategories = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
-    const categories = await CategoryModel.find().sort({ createdAt: -1 });
+    const categories = await CategoryModel.find().sort({ order: 1, createdAt: -1 });
 
     res.status(200).json({
         success: true,
@@ -89,5 +92,24 @@ export const deleteCategory = CatchAsyncError(async (req: Request, res: Response
     res.status(200).json({
         success: true,
         message: "Category deleted successfully",
+    });
+});
+
+// Update Categories Order (Bulk)
+export const updateCategoryOrder = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
+    const { categories } = req.body;
+
+    if (!categories || !Array.isArray(categories)) {
+        return next(new ErrorHandler("Invalid categories array", 400));
+    }
+
+    // categories is expected to be an array of { id: string, order: number }
+    for (const cat of categories) {
+        await CategoryModel.findByIdAndUpdate(cat.id, { order: cat.order });
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Categories order updated successfully",
     });
 });

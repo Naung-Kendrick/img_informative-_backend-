@@ -5,6 +5,9 @@ export interface IAbout extends Document {
     description: string;
     policy: string;
     objective: string;
+    duty: string;
+    mainTasks: string;
+    theme: string;
     imageUrl: string;
 }
 
@@ -25,6 +28,18 @@ const aboutSchema: Schema<IAbout> = new mongoose.Schema(
         objective: {
             type: String,
             required: [true, 'Please enter the objective'],
+        },
+        duty: {
+            type: String,
+            required: [true, 'Please enter the duty'],
+        },
+        mainTasks: {
+            type: String,
+            required: [true, 'Please enter the main tasks'],
+        },
+        theme: {
+            type: String,
+            default: '',
         },
         imageUrl: {
             type: String,

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import CommentModel from "../models/comment.model";
 import ErrorHandler from "../utils/ErrorHandler";
-import { logActivity } from "../utils/AuditLogger";
+import { logAudit, sanitizeForLog } from "../utils/AuditLogger";
 
 export const createComment = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -72,13 +72,16 @@ export const deleteComment = async (req: Request, res: Response, next: NextFunct
         await comment.deleteOne();
 
         // Audit Log
-        await logActivity(
-            "DELETE_COMMENT",
-            req.user?._id,
-            `Deleted comment by ${comment.author}: "${comment.content.substring(0, 50)}${comment.content.length > 50 ? '...' : ''}"`,
-            { id: commentId as string, type: "COMMENT" },
-            req.ip as string
-        );
+        await logAudit({
+            req,
+            action: "DELETE",
+            resourceType: "Comment",
+            resourceId: commentId as string,
+            actorId: req.user?._id,
+            actorName: req.user?.name || "Unknown",
+            before: sanitizeForLog(comment.toObject()),
+            description: `Deleted comment by ${comment.author}: "${comment.content.substring(0, 50)}${comment.content.length > 50 ? '...' : ''}"`
+        });
 
         res.status(200).json({
             success: true,
@@ -116,13 +119,17 @@ export const updateComment = async (req: Request, res: Response, next: NextFunct
 
         // Audit Log
         if (oldContent !== content) {
-            await logActivity(
-                "EDIT_COMMENT",
-                req.user?._id,
-                `Edited comment: "${oldContent.substring(0, 50)}..." -> "${content.substring(0, 50)}..."`,
-                { id: commentId as string, type: "COMMENT" },
-                req.ip as string
-            );
+            await logAudit({
+                req,
+                action: "UPDATE",
+                resourceType: "Comment",
+                resourceId: commentId as string,
+                actorId: req.user?._id,
+                actorName: req.user?.name || "Unknown",
+                before: { content: oldContent },
+                after: { content: content },
+                description: `Edited comment: "${oldContent.substring(0, 50)}..." -> "${content.substring(0, 50)}..."`
+            });
         }
 
         // Populate and return

@@ -82,7 +82,7 @@ export const updateDistrict = async (req: Request, res: Response, next: NextFunc
             updateData.coverImage = file.location;
         }
 
-        const district = await DistrictModel.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
+        const district = await DistrictModel.findByIdAndUpdate(id, updateData, { returnDocument: 'after', runValidators: true });
 
         if (!district) {
             return next(new ErrorHandler("District not found.", 404));

@@ -5,6 +5,7 @@ import ErrorHandler from "../utils/ErrorHandler";
 import UserModel from "../models/user.model";
 import { uploadS3 } from "../middlewares/upload";
 import { OAuth2Client } from "google-auth-library";
+import { logAudit, sanitizeForLog } from "../utils/AuditLogger";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -24,9 +25,11 @@ export const register = CatchAsyncError(
         }
 
         const user = await UserModel.create({ name, email: normalizedEmail, password, phone });
+        const accessToken = await user.signAccessToken();
 
         res.status(201).json({
             success: true,
+            accessToken,
             user,
         })
     }
@@ -55,7 +58,23 @@ export const login = CatchAsyncError(
         if (!isPasswordMatch) {
             return next(new ErrorHandler("Invalid Credentials!", 403))
         }
+
+        user.lastLogin = new Date();
+        await user.save();
+
         const accessToken = await user.signAccessToken();
+
+        // Audit Log
+        await logAudit({
+            req,
+            action: "LOGIN",
+            resourceType: "User",
+            resourceId: user._id.toString(),
+            actorId: user._id,
+            actorName: user.name,
+            after: sanitizeForLog(user.toObject()),
+            description: `User logged in: ${user.name} (${user.email})`
+        });
 
         res.status(201).json({
             success: true,
@@ -110,7 +129,22 @@ export const googleLogin = CatchAsyncError(
             return next(new ErrorHandler("Your account has been deactivated. Please contact support.", 403));
         }
 
+        user.lastLogin = new Date();
+        await user.save();
+
         const accessToken = await user.signAccessToken();
+
+        // Audit Log
+        await logAudit({
+            req,
+            action: "LOGIN",
+            resourceType: "User",
+            resourceId: user._id.toString(),
+            actorId: user._id,
+            actorName: user.name,
+            after: sanitizeForLog(user.toObject()),
+            description: `User logged in via Google: ${user.name} (${user.email})`
+        });
 
         res.status(200).json({
             success: true,
@@ -292,8 +326,23 @@ export const updateUserRoleByAdmin = CatchAsyncError(
             return next(new ErrorHandler("You can't promote a user to Admin or Root_Admin", 403));
         }
 
+        const beforeData = await UserModel.findById(userId).lean();
+        const oldRole = user.role;
         user.role = role;
         const updatedUser = await user.save();
+
+        // Audit Log
+        await logAudit({
+            req,
+            action: "UPDATE",
+            resourceType: "User",
+            resourceId: user._id.toString(),
+            actorId: req.user?._id,
+            actorName: req.user?.name || "Unknown",
+            before: sanitizeForLog(beforeData),
+            after: sanitizeForLog(updatedUser.toObject()),
+            description: `Updated role for ${user.name}: ${oldRole} -> ${role}`
+        });
 
         res.status(201).json({
             success: true,
@@ -349,6 +398,44 @@ export const deleteUser = CatchAsyncError(
         res.status(200).json({
             success: true,
             message: "User is deleted successfully!",
+        })
+    }
+);
+
+// Update user status by admin
+type TUpdateStatusReq = {
+    userId: string;
+    active: boolean;
+}
+export const updateUserStatusByAdmin = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
+        const currentUserRole = req.user.role;
+        const { userId, active } = req.body as TUpdateStatusReq;
+
+        if (!userId || typeof active !== "boolean") {
+            return next(new ErrorHandler("UserId and status are required", 400));
+        }
+
+        // Only Root_Admin (3) can change status as per user request
+        if (currentUserRole !== 3) {
+            return next(new ErrorHandler("Only Root Admin can change user status", 403));
+        }
+
+        const user = await UserModel.findById(userId).select("+password");
+        if (!user) {
+            return next(new ErrorHandler("User not found", 404));
+        }
+
+        if (req.user._id.toString() === userId) {
+            return next(new ErrorHandler("You can't change your own status", 400));
+        }
+
+        user.active = active;
+        const updatedUser = await user.save();
+
+        res.status(201).json({
+            success: true,
+            user: updatedUser,
         })
     }
 );

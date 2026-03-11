@@ -1,6 +1,6 @@
 import express from "express";
 import { isAuthenticated, authorizeRoles } from "../middlewares/auth";
-import { createComment, getCommentsByNewsId, deleteComment } from "../controllers/comment.controller";
+import { createComment, getCommentsByNewsId, deleteComment, updateComment } from "../controllers/comment.controller";
 
 const commentRouter = express.Router();
 
@@ -10,7 +10,10 @@ commentRouter.get('/:newsId', getCommentsByNewsId);
 // Protected: Only Logged in Users can POST a comment
 commentRouter.post('/:newsId', isAuthenticated, createComment);
 
-// Protected: Only Root Admin (3) can delete a comment
-commentRouter.delete('/:commentId', isAuthenticated, authorizeRoles([3]), deleteComment);
+// Protected: Edit Comment (Author only checked in controller)
+commentRouter.patch('/:commentId', isAuthenticated, updateComment);
+
+// Protected: Delete Comment (Author or Admin checked in controller)
+commentRouter.delete('/:commentId', isAuthenticated, deleteComment);
 
 export default commentRouter;

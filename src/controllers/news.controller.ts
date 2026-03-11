@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import NewsModel from "../models/news.model";
 import ErrorHandler from "../utils/ErrorHandler";
+import { logAudit, sanitizeForLog } from "../utils/AuditLogger";
 
 // Create an Article
 export const createNews = async (req: Request, res: Response, next: NextFunction) => {
@@ -75,7 +76,7 @@ export const getNewsById = async (req: Request, res: Response, next: NextFunctio
         const news = await NewsModel.findByIdAndUpdate(
             req.params.id,
             { $inc: { views: 1 } },
-            { new: true }
+            { returnDocument: 'after' }
         )
             .populate('author', 'name email avatar role')
             .populate('likes', 'name email avatar role'); // ADDED: Populate user info for Likes
@@ -109,11 +110,25 @@ export const updateNews = async (req: Request, res: Response, next: NextFunction
             updateData.status = "Pending";
         }
 
-        const news = await NewsModel.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
+        const beforeData = await NewsModel.findById(id).lean();
+        const news = await NewsModel.findByIdAndUpdate(id, updateData, { returnDocument: 'after', runValidators: true });
 
-        if (!news) {
+        if (!news || !beforeData) {
             return next(new ErrorHandler("News not found", 404));
         }
+
+        // Audit Log
+        await logAudit({
+            req,
+            action: "UPDATE",
+            resourceType: "News",
+            resourceId: news._id.toString(),
+            actorId: req.user?._id,
+            actorName: req.user?.name || "Unknown",
+            before: sanitizeForLog(beforeData),
+            after: sanitizeForLog(news.toObject()),
+            description: `Updated news article: "${news.title}"`
+        });
 
         res.status(200).json({
             success: true,
@@ -127,11 +142,25 @@ export const updateNews = async (req: Request, res: Response, next: NextFunction
 // Hard Delete Article Data
 export const deleteNews = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const news = await NewsModel.findByIdAndDelete(req.params.id);
+        const news = await NewsModel.findById(req.params.id).lean();
 
         if (!news) {
             return next(new ErrorHandler("News not found", 404));
         }
+
+        await NewsModel.findByIdAndDelete(req.params.id);
+
+        // Audit Log
+        await logAudit({
+            req,
+            action: "DELETE",
+            resourceType: "News",
+            resourceId: news._id.toString(),
+            actorId: req.user?._id,
+            actorName: req.user?.name || "Unknown",
+            before: sanitizeForLog(news),
+            description: `Deleted news article: "${news.title}"`
+        });
 
         res.status(200).json({
             success: true,
@@ -181,6 +210,7 @@ export const toggleLikeNews = async (req: Request, res: Response, next: NextFunc
         }
 
         await news.save();
+        await news.populate('likes', 'name email avatar role'); // Populate to ensure UI reflects the user info
 
         res.status(200).json({
             success: true,

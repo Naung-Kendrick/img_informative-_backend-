@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import AnnouncementModel from "../models/announcement.model";
 import ErrorHandler from "../utils/ErrorHandler";
+import { logAudit, sanitizeForLog } from "../utils/AuditLogger";
 
 // Create an Announcement
 export const createAnnouncement = async (req: Request, res: Response, next: NextFunction) => {
@@ -38,6 +39,18 @@ export const createAnnouncement = async (req: Request, res: Response, next: Next
             documentImages,
             status: finalStatus,
             author: authorId,
+        });
+
+        // Audit Log
+        await logAudit({
+            req,
+            action: "CREATE",
+            resourceType: "Announcement",
+            resourceId: announcement._id.toString(),
+            actorId: req.user?._id,
+            actorName: req.user?.name || "Unknown",
+            after: sanitizeForLog(announcement.toObject()),
+            description: `Created new announcement: "${announcement.title}"`
         });
 
         res.status(201).json({
@@ -91,11 +104,25 @@ export const updateAnnouncement = async (req: Request, res: Response, next: Next
             updateData.status = "Pending";
         }
 
-        const announcement = await AnnouncementModel.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
+        const beforeData = await AnnouncementModel.findById(id).lean();
+        const announcement = await AnnouncementModel.findByIdAndUpdate(id, updateData, { returnDocument: 'after', runValidators: true });
 
-        if (!announcement) {
+        if (!announcement || !beforeData) {
             return next(new ErrorHandler("Announcement not found.", 404));
         }
+
+        // Audit Log
+        await logAudit({
+            req,
+            action: "UPDATE",
+            resourceType: "Announcement",
+            resourceId: announcement._id.toString(),
+            actorId: req.user?._id,
+            actorName: req.user?.name || "Unknown",
+            before: sanitizeForLog(beforeData),
+            after: sanitizeForLog(announcement.toObject()),
+            description: `Updated announcement: "${announcement.title}"`
+        });
 
         res.status(200).json({
             success: true,
@@ -111,11 +138,25 @@ export const deleteAnnouncement = async (req: Request, res: Response, next: Next
     try {
         const { id } = req.params;
 
-        const announcement = await AnnouncementModel.findByIdAndDelete(id);
+        const announcement = await AnnouncementModel.findById(id).lean();
 
         if (!announcement) {
             return next(new ErrorHandler("Announcement not found.", 404));
         }
+
+        await AnnouncementModel.findByIdAndDelete(id);
+
+        // Audit Log
+        await logAudit({
+            req,
+            action: "DELETE",
+            resourceType: "Announcement",
+            resourceId: id as string,
+            actorId: req.user?._id,
+            actorName: req.user?.name || "Unknown",
+            before: sanitizeForLog(announcement),
+            description: `Deleted announcement: "${announcement.title}"`
+        });
 
         res.status(200).json({
             success: true,

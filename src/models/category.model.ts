@@ -18,6 +18,10 @@ const categorySchema: Schema<ICategory> = new Schema({
     description: {
         type: String,
     },
+    order: {
+        type: Number,
+        default: 0,
+    },
     createdBy: {
         type: String,
         required: true,

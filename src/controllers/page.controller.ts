@@ -92,7 +92,7 @@ export const updatePage = async (req: Request, res: Response, next: NextFunction
         }
 
         const page = await PageModel.findByIdAndUpdate(id, updateData, {
-            new: true,
+            returnDocument: 'after',
             runValidators: true,
         });
 
