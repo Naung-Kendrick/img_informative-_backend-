@@ -5,7 +5,9 @@ export interface IDistrict extends Document {
     coverImage: string;
     address: string;
     phone: string;
+    officerInCharge?: string;
     mapUrl?: string;
+    order: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -28,8 +30,15 @@ const districtSchema: Schema<IDistrict> = new mongoose.Schema(
             type: String,
             required: [true, 'Phone number is missing'],
         },
+        officerInCharge: {
+            type: String,
+        },
         mapUrl: {
             type: String,
+        },
+        order: {
+            type: Number,
+            default: 0
         }
     },
     { timestamps: true }

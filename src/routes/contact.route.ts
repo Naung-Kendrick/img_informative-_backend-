@@ -1,5 +1,6 @@
 import express from "express";
 import { authorizeRoles, isAuthenticated } from "../middlewares/auth";
+import { spamLimiter } from "../middlewares/rateLimiter";
 import {
     createContactMessage,
     getAllContactMessages,
@@ -10,7 +11,8 @@ import {
 const contactRouter = express.Router();
 
 // PUBLIC — Anyone can submit a contact form
-contactRouter.post('/', createContactMessage);
+contactRouter.post('/', spamLimiter, createContactMessage);
+
 
 // ADMIN ONLY — View, mark as read, delete messages
 contactRouter.get('/', isAuthenticated, authorizeRoles([1, 2, 3]), getAllContactMessages);

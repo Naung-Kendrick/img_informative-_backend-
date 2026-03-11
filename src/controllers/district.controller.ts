@@ -5,7 +5,7 @@ import ErrorHandler from "../utils/ErrorHandler";
 // Create a District
 export const createDistrict = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { name, address, phone, mapUrl } = req.body;
+        const { name, address, phone, mapUrl, officerInCharge } = req.body;
 
         if (!name || !address || !phone) {
             return next(new ErrorHandler("Please provide name, address, and phone.", 400));
@@ -26,6 +26,7 @@ export const createDistrict = async (req: Request, res: Response, next: NextFunc
             name,
             address,
             phone,
+            officerInCharge,
             mapUrl,
             coverImage,
         });
@@ -42,7 +43,7 @@ export const createDistrict = async (req: Request, res: Response, next: NextFunc
 // Retrieve all Districts
 export const getAllDistricts = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const districts = await DistrictModel.find().sort({ createdAt: 1 });
+        const districts = await DistrictModel.find().sort({ order: 1, createdAt: 1 });
 
         res.status(200).json({
             success: true,
@@ -114,5 +115,29 @@ export const deleteDistrict = async (req: Request, res: Response, next: NextFunc
         });
     } catch (error: any) {
         return next(new ErrorHandler(error.message || 'Failed to delete district', 500));
+    }
+};
+
+// Reorder Districts
+export const reorderDistricts = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const districtsToReorder: { id: string; order: number }[] = req.body;
+
+        if (!Array.isArray(districtsToReorder) || districtsToReorder.length === 0) {
+            return next(new ErrorHandler("Invalid data format for reordering", 400));
+        }
+
+        const updatePromises = districtsToReorder.map(districtArr =>
+            DistrictModel.findByIdAndUpdate(districtArr.id, { order: districtArr.order })
+        );
+
+        await Promise.all(updatePromises);
+
+        res.status(200).json({
+            success: true,
+            message: "Districts reordered successfully.",
+        });
+    } catch (error: any) {
+        return next(new ErrorHandler(error.message || 'Failed to reorder districts', 500));
     }
 };

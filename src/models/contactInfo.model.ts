@@ -6,8 +6,8 @@ export interface IContactInfo extends Document {
     phone: string;
     email: string;
     facebook: string;
-    twitter: string;
-    instagram: string;
+    telegram: string;
+    viber: string;
     working_hours_en: string;
     working_hours_mm: string;
     map_embed_url: string;
@@ -20,8 +20,8 @@ const contactInfoSchema: Schema<IContactInfo> = new mongoose.Schema(
         phone: { type: String, required: true },
         email: { type: String, required: true },
         facebook: { type: String, default: "" },
-        twitter: { type: String, default: "" },
-        instagram: { type: String, default: "" },
+        telegram: { type: String, default: "" },
+        viber: { type: String, default: "" },
         working_hours_en: { type: String, default: "" },
         working_hours_mm: { type: String, default: "" },
         map_embed_url: { type: String, default: "" },

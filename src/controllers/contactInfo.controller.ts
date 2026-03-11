@@ -17,8 +17,8 @@ export const getContactInfo = async (req: Request, res: Response, next: NextFunc
                     phone: "+95 9 123 456 789",
                     email: "contact@taang.gov.mm",
                     facebook: "",
-                    twitter: "",
-                    instagram: "",
+                    telegram: "",
+                    viber: "",
                     working_hours_en: "Mon - Fri, 9:00 AM - 4:00 PM",
                     working_hours_mm: "တနင်္လာ - သောကြာ၊ နံနက် ၉ နာရီ - ညနေ ၄ နာရီ",
                 }

@@ -1,9 +1,10 @@
 import express, { NextFunction, Request, Response } from "express";
 import "dotenv/config";
 import cors from "cors";
+import helmet from "helmet";
 import { ErrorMiddleware } from "./middlewares/error";
 import connectDB from "./config/db";
-import rateLimit from "express-rate-limit";
+import { apiLimiter } from "./middlewares/rateLimiter";
 
 import userRouter from "./routes/user.route";
 import categoryRouter from "./routes/category.route";
@@ -23,6 +24,9 @@ import faqRouter from "./routes/faq.route";
 import layoutRouter from "./routes/layout.route";
 export const app = express();
 
+// 🔱 Security Headers with Helmet
+app.use(helmet());
+
 // 🔌 Standard Express Middleware
 app.use(express.json({ limit: "50mb" }));
 app.use(cors({
@@ -31,6 +35,9 @@ app.use(cors({
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
+
+// 🛡️ Global Rate Limiter (Prevent general abuse)
+app.use(apiLimiter);
 
 const port = process.env.PORT || 3000;
 const dbUrl = process.env.DB_URL || "";
@@ -72,3 +79,4 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 app.use(ErrorMiddleware);
+

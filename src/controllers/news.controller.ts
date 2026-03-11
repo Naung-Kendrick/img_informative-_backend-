@@ -6,7 +6,7 @@ import { logAudit, sanitizeForLog } from "../utils/AuditLogger";
 // Create an Article
 export const createNews = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { title, category, content, status, images } = req.body;
+        const { title, category, content, status, images, district, township } = req.body;
         const authorId = req.user?._id;
 
         if (!title || !content || !category) {
@@ -35,6 +35,8 @@ export const createNews = async (req: Request, res: Response, next: NextFunction
             status: finalStatus,
             images: resolvedImages,
             author: authorId,
+            district,
+            township
         });
 
         res.status(201).json({
