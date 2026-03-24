@@ -9,6 +9,11 @@ export interface IAbout extends Document {
     mainTasks: string;
     theme: string;
     imageUrl: string;
+    uniformDescription?: string;
+    uniform1Image?: string;
+    uniform1Name?: string;
+    uniform2Image?: string;
+    uniform2Name?: string;
 }
 
 const aboutSchema: Schema<IAbout> = new mongoose.Schema(
@@ -44,7 +49,12 @@ const aboutSchema: Schema<IAbout> = new mongoose.Schema(
         imageUrl: {
             type: String,
             default: '',
-        }
+        },
+        uniformDescription: { type: String, default: '' },
+        uniform1Image: { type: String, default: '' },
+        uniform1Name: { type: String, default: '' },
+        uniform2Image: { type: String, default: '' },
+        uniform2Name: { type: String, default: '' }
     },
     { timestamps: true }
 );

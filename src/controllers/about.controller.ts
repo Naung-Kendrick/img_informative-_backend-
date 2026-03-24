@@ -19,7 +19,10 @@ export const getAboutContent = async (req: Request, res: Response, next: NextFun
 // ── ADMIN: Create or Update About Content ──────────────────────────────────────────────────
 export const saveAboutContent = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { title, description, policy, objective, duty, mainTasks, imageUrl } = req.body;
+        const { 
+            title, description, policy, objective, duty, mainTasks, imageUrl,
+            uniformDescription, uniform1Image, uniform1Name, uniform2Image, uniform2Name 
+        } = req.body;
 
         if (!title || !description || !policy || !objective || !duty || !mainTasks) {
             return next(new ErrorHandler("Please fill out all required fields.", 400));
@@ -37,6 +40,12 @@ export const saveAboutContent = async (req: Request, res: Response, next: NextFu
             if (imageUrl !== undefined) {
                 about.imageUrl = imageUrl;
             }
+            if (uniformDescription !== undefined) about.uniformDescription = uniformDescription;
+            if (uniform1Image !== undefined) about.uniform1Image = uniform1Image;
+            if (uniform1Name !== undefined) about.uniform1Name = uniform1Name;
+            if (uniform2Image !== undefined) about.uniform2Image = uniform2Image;
+            if (uniform2Name !== undefined) about.uniform2Name = uniform2Name;
+            
             await about.save();
         } else {
             about = await AboutModel.create({
@@ -47,6 +56,11 @@ export const saveAboutContent = async (req: Request, res: Response, next: NextFu
                 duty,
                 mainTasks,
                 imageUrl: imageUrl || '',
+                uniformDescription: uniformDescription || '',
+                uniform1Image: uniform1Image || '',
+                uniform1Name: uniform1Name || '',
+                uniform2Image: uniform2Image || '',
+                uniform2Name: uniform2Name || ''
             });
         }
 
