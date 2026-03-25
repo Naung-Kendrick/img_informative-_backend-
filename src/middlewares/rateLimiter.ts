@@ -5,13 +5,13 @@ import rateLimit from "express-rate-limit";
  * 🎯 Goal: Prevent general DDoS and abuse across all endpoints.
  */
 export const apiLimiter = rateLimit({
-    windowMs: 30 * 60 * 1000, // 30 minutes
-    max: 100, // Limit each IP to 100 requests per `window`
-    standardHeaders: "draft-8", // newest standard
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 500, // Increased to 500 for normal usage
+    standardHeaders: "draft-8",
     legacyHeaders: false,
     message: {
         success: false,
-        message: "Too many requests from this IP, please try again after 30 minutes.",
+        message: "Too many requests from this IP, please try again after 15 minutes.",
     },
 });
 
