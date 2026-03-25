@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import StatisticModel from "../models/statistic.model";
 import ErrorHandler from "../utils/ErrorHandler";
+import CatchAsyncError from "../middlewares/catchAsyncError";
 
 // Create a Statistic
-export const createStatistic = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const createStatistic = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { title_en, title_mm, value, icon, date_en, date_mm, order } = req.body;
 
         if (!title_en || !title_mm || value === undefined) {
@@ -25,28 +26,24 @@ export const createStatistic = async (req: Request, res: Response, next: NextFun
             success: true,
             statistic,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);
 
 // Retrieve all Statistics
-export const getAllStatistics = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const getAllStatistics = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const statistics = await StatisticModel.find().sort({ order: 1 });
 
         res.status(200).json({
             success: true,
             statistics,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 500));
     }
-};
+);
 
 // Retrieve specific Statistic by ID
-export const getStatisticById = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const getStatisticById = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const statistic = await StatisticModel.findById(req.params.id);
 
         if (!statistic) {
@@ -57,14 +54,12 @@ export const getStatisticById = async (req: Request, res: Response, next: NextFu
             success: true,
             statistic,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);
 
 // Update an existing Statistic
-export const updateStatistic = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const updateStatistic = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const statistic = await StatisticModel.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after', runValidators: true });
 
         if (!statistic) {
@@ -75,14 +70,12 @@ export const updateStatistic = async (req: Request, res: Response, next: NextFun
             success: true,
             statistic,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);
 
 // Delete a Statistic
-export const deleteStatistic = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const deleteStatistic = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const statistic = await StatisticModel.findByIdAndDelete(req.params.id);
 
         if (!statistic) {
@@ -93,7 +86,5 @@ export const deleteStatistic = async (req: Request, res: Response, next: NextFun
             success: true,
             message: "Statistic deleted successfully"
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);

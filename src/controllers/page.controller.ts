@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import PageModel from "../models/page.model";
 import ErrorHandler from "../utils/ErrorHandler";
+import CatchAsyncError from "../middlewares/catchAsyncError";
 
 // ── PUBLIC: Get all pages by section ──────────────────────────────────────
-export const getPagesBySection = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const getPagesBySection = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const section = req.params.section as string;
 
         if (!['services', 'districts'].includes(section)) {
@@ -19,14 +20,12 @@ export const getPagesBySection = async (req: Request, res: Response, next: NextF
             success: true,
             pages,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || "Failed to fetch pages", 500));
     }
-};
+);
 
 // ── PUBLIC: Get a single page by ID ───────────────────────────────────────
-export const getPageById = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const getPageById = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const page = await PageModel.findById(req.params.id)
             .populate('author', 'name email avatar role');
 
@@ -38,14 +37,12 @@ export const getPageById = async (req: Request, res: Response, next: NextFunctio
             success: true,
             page,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || "Failed to fetch page", 500));
     }
-};
+);
 
 // ── ADMIN: Create a page ──────────────────────────────────────────────────
-export const createPage = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const createPage = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { title, content, section, status, bannerImage, order } = req.body;
         const authorId = req.user?._id;
 
@@ -76,14 +73,12 @@ export const createPage = async (req: Request, res: Response, next: NextFunction
             success: true,
             page,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || "Failed to create page", 500));
     }
-};
+);
 
 // ── ADMIN: Update a page ──────────────────────────────────────────────────
-export const updatePage = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const updatePage = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { id } = req.params;
         const updateData = req.body;
 
@@ -104,14 +99,12 @@ export const updatePage = async (req: Request, res: Response, next: NextFunction
             success: true,
             page,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || "Failed to update page", 500));
     }
-};
+);
 
 // ── ADMIN: Delete a page ──────────────────────────────────────────────────
-export const deletePage = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const deletePage = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const page = await PageModel.findByIdAndDelete(req.params.id);
 
         if (!page) {
@@ -122,7 +115,5 @@ export const deletePage = async (req: Request, res: Response, next: NextFunction
             success: true,
             message: "Page deleted successfully",
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || "Failed to delete page", 500));
     }
-};
+);

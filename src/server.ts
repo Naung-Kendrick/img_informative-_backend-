@@ -30,16 +30,14 @@ app.use(helmet());
 // 🔌 Standard Express Middleware
 app.use(express.json({ limit: "50mb" }));
 app.use(cors({
-    origin: process.env.FRONTEND_URL 
-        ? [process.env.FRONTEND_URL, "http://localhost:5173", "http://localhost:5174", "http://localhost:3001", "http://127.0.0.1:5173", "http://127.0.0.1:5174"]
-        : ["http://localhost:5173", "http://localhost:5174", "http://localhost:3001", "http://127.0.0.1:5173", "http://127.0.0.1:5174"],
+    origin: "*",
     credentials: true,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
 // 🛡️ Global Rate Limiter (Prevent general abuse)
-// app.use(apiLimiter);
+app.use(apiLimiter);
 
 const port = process.env.PORT || 3000;
 const dbUrl = process.env.DB_URL || "";

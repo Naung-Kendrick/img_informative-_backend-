@@ -1,16 +1,18 @@
 import { Request, Response, NextFunction } from "express";
 import AnnouncementModel from "../models/announcement.model";
 import ErrorHandler from "../utils/ErrorHandler";
+import CatchAsyncError from "../middlewares/catchAsyncError";
 import { logAudit, sanitizeForLog } from "../utils/AuditLogger";
+import { UserRole } from "../types/roles";
 
 // Create an Announcement
-export const createAnnouncement = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const createAnnouncement = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { title, publishedDate, referenceNumber, status } = req.body;
         const authorId = req.user?._id;
 
         let finalStatus = status || "Draft";
-        if (req.user?.role === 1 && finalStatus === "Published") {
+        if (req.user?.role === UserRole.EDITOR && finalStatus === "Published") {
             finalStatus = "Pending";
         }
 
@@ -18,7 +20,6 @@ export const createAnnouncement = async (req: Request, res: Response, next: Next
             return next(new ErrorHandler("Please enter title and published date.", 400));
         }
 
-        // Get multiple files from Multer S3
         const files = req.files as Express.MulterS3.File[] | undefined;
         let documentImages: string[] = [];
 
@@ -57,28 +58,35 @@ export const createAnnouncement = async (req: Request, res: Response, next: Next
             success: true,
             announcement,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || 'Failed to create announcement', 500));
     }
-};
+);
 
-// Retrieve all Announcements
-export const getAllAnnouncements = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const announcements = await AnnouncementModel.find().sort({ publishedDate: -1 });
+// Retrieve all Announcements with pagination
+export const getAllAnnouncements = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const skip = (page - 1) * limit;
+
+        const total = await AnnouncementModel.countDocuments();
+        const announcements = await AnnouncementModel.find()
+            .sort({ publishedDate: -1 })
+            .skip(skip)
+            .limit(limit);
 
         res.status(200).json({
             success: true,
             announcements,
+            total,
+            page,
+            limit
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || 'Failed to fetch announcements', 500));
     }
-};
+);
 
 // Retrieve ONE Announcement
-export const getAnnouncementById = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const getAnnouncementById = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const announcement = await AnnouncementModel.findById(req.params.id);
 
         if (!announcement) {
@@ -89,25 +97,27 @@ export const getAnnouncementById = async (req: Request, res: Response, next: Nex
             success: true,
             announcement,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);
 
 // Update existing Announcement
-export const updateAnnouncement = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const updateAnnouncement = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { id } = req.params;
         const updateData = req.body;
 
-        if (req.user?.role === 1 && updateData.status === "Published") {
+        if (req.user?.role === UserRole.EDITOR && updateData.status === "Published") {
             updateData.status = "Pending";
         }
 
         const beforeData = await AnnouncementModel.findById(id).lean();
+        if (!beforeData) {
+            return next(new ErrorHandler("Announcement not found.", 404));
+        }
+
         const announcement = await AnnouncementModel.findByIdAndUpdate(id, updateData, { returnDocument: 'after', runValidators: true });
 
-        if (!announcement || !beforeData) {
+        if (!announcement) {
             return next(new ErrorHandler("Announcement not found.", 404));
         }
 
@@ -128,14 +138,12 @@ export const updateAnnouncement = async (req: Request, res: Response, next: Next
             success: true,
             announcement,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || 'Failed to update announcement', 500));
     }
-};
+);
 
 // Delete Announcement
-export const deleteAnnouncement = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const deleteAnnouncement = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { id } = req.params;
 
         const announcement = await AnnouncementModel.findById(id).lean();
@@ -162,17 +170,15 @@ export const deleteAnnouncement = async (req: Request, res: Response, next: Next
             success: true,
             message: "Announcement deleted successfully.",
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || 'Failed to delete announcement', 500));
     }
-};
+);
 
-export const uploadAnnouncementImage = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const uploadAnnouncementImage = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const files = req.files as Express.MulterS3.File[] | undefined;
 
         if (!files || files.length === 0) {
-            return res.status(400).json({ success: false, message: "Please upload at least one file." });
+            return next(new ErrorHandler("Please upload at least one file.", 400));
         }
 
         const urls = files.map(file => file.location);
@@ -181,7 +187,5 @@ export const uploadAnnouncementImage = async (req: Request, res: Response, next:
             success: true,
             urls,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 500));
     }
-};
+);

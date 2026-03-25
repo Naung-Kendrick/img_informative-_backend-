@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import NewsModel from "../models/news.model";
 import ErrorHandler from "../utils/ErrorHandler";
+import CatchAsyncError from "../middlewares/catchAsyncError";
 import { logAudit, sanitizeForLog } from "../utils/AuditLogger";
+import { UserRole } from "../types/roles";
 
 // Create an Article
-export const createNews = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const createNews = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { title, category, content, status, images, district, township } = req.body;
         const authorId = req.user?._id;
 
@@ -13,7 +15,6 @@ export const createNews = async (req: Request, res: Response, next: NextFunction
             return next(new ErrorHandler("Please complete all required fields.", 400));
         }
 
-        // Handle multiple files from req.files or URLs from req.body.images
         const files = req.files as Express.MulterS3.File[] | undefined;
         let resolvedImages: string[] = [];
 
@@ -24,7 +25,7 @@ export const createNews = async (req: Request, res: Response, next: NextFunction
         }
 
         let finalStatus = status || "Draft";
-        if (req.user?.role === 1 && finalStatus === "Published") {
+        if (req.user?.role === UserRole.EDITOR && finalStatus === "Published") {
             finalStatus = "Pending";
         }
 
@@ -43,45 +44,48 @@ export const createNews = async (req: Request, res: Response, next: NextFunction
             success: true,
             news,
         });
-    } catch (error: any) {
-        // 500 = server/DB error, not the client's fault
-        return next(new ErrorHandler(error.message || 'Failed to create news', 500));
     }
-};
+);
 
-// Retrieve all Articles — optionally filtered by ?category= query parameter
-export const getAllNews = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        // Build dynamic filter: if ?category= is provided, filter by it
-        const filter: Record<string, any> = {};
+// Retrieve all Articles — optionally filtered by ?category= query parameter with pagination
+export const getAllNews = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const skip = (page - 1) * limit;
+
+        const filter: Record<string, string | number | boolean | object> = {};
         if (req.query.category) {
             filter.category = req.query.category as string;
         }
 
+        const total = await NewsModel.countDocuments(filter);
         const news = await NewsModel.find(filter)
             .populate('author', 'name email avatar role')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
 
         res.status(200).json({
             success: true,
             news,
+            total,
+            page,
+            limit
         });
-    } catch (error: any) {
-        // 500 = DB/server failure, not client's fault
-        return next(new ErrorHandler(error.message || 'Failed to fetch news', 500));
     }
-};
+);
 
 // Retrieve just ONE Article by matching the /news/:id
-export const getNewsById = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const getNewsById = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const news = await NewsModel.findByIdAndUpdate(
             req.params.id,
             { $inc: { views: 1 } },
             { returnDocument: 'after' }
         )
             .populate('author', 'name email avatar role')
-            .populate('likes', 'name email avatar role'); // ADDED: Populate user info for Likes
+            .populate('likes', 'name email avatar role');
 
         if (!news) {
             return next(new ErrorHandler("News article not found.", 404));
@@ -91,32 +95,33 @@ export const getNewsById = async (req: Request, res: Response, next: NextFunctio
             success: true,
             news,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);
 
-// Update an existing Article (Requires passing properties explicitly overriding DB document)
-export const updateNews = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+// Update an existing Article
+export const updateNews = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { id } = req.params;
         const updateData = req.body;
 
-        // Handle multiple files if provided
         const files = req.files as Express.MulterS3.File[] | undefined;
         if (files && files.length > 0) {
             updateData.images = files.map((file) => file.location);
         }
 
-        if (req.user?.role === 1 && updateData.status === "Published") {
+        if (req.user?.role === UserRole.EDITOR && updateData.status === "Published") {
             updateData.status = "Pending";
         }
 
         const beforeData = await NewsModel.findById(id).lean();
+        if (!beforeData) {
+            return next(new ErrorHandler("News not found", 404));
+        }
+
         const news = await NewsModel.findByIdAndUpdate(id, updateData, { returnDocument: 'after', runValidators: true });
 
-        if (!news || !beforeData) {
-            return next(new ErrorHandler("News not found", 404));
+        if (!news) {
+            return next(new ErrorHandler("News could not be updated", 400));
         }
 
         // Audit Log
@@ -136,14 +141,12 @@ export const updateNews = async (req: Request, res: Response, next: NextFunction
             success: true,
             news,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);
 
 // Hard Delete Article Data
-export const deleteNews = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const deleteNews = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const news = await NewsModel.findById(req.params.id).lean();
 
         if (!news) {
@@ -168,14 +171,11 @@ export const deleteNews = async (req: Request, res: Response, next: NextFunction
             success: true,
             message: "News deleted successfully"
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);
 
-// Image Upload Controller - multer-s3 middleware runs first on the route, populating req.files
+// Image Upload Controller
 export const uploadImage = (req: Request, res: Response, next: NextFunction) => {
-    // AWS S3 provides the public URL inside req.files[].location (via multer-s3)
     const files = req.files as Express.MulterS3.File[];
     if (!files || files.length === 0) {
         return next(new ErrorHandler("No image files provided.", 400));
@@ -190,10 +190,14 @@ export const uploadImage = (req: Request, res: Response, next: NextFunction) => 
 };
 
 // Toggle Love/Like
-export const toggleLikeNews = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const toggleLikeNews = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { id } = req.params;
         const userId = req.user?._id;
+
+        if (!userId) {
+            return next(new ErrorHandler("Login Required", 401));
+        }
 
         const news = await NewsModel.findById(id);
         if (!news) {
@@ -201,24 +205,20 @@ export const toggleLikeNews = async (req: Request, res: Response, next: NextFunc
         }
 
         // Check if user already liked the post
-        const isLiked = news.likes.some((id: any) => id.toString() === userId.toString());
+        const isLiked = news.likes.some((lId) => lId.toString() === userId.toString());
 
         if (isLiked) {
-            // Unlike: Remove userId from likes array
-            news.likes = news.likes.filter((id: any) => id.toString() !== userId.toString());
+            news.likes = news.likes.filter((lId) => lId.toString() !== userId.toString());
         } else {
-            // Like: Add userId to likes array
             news.likes.push(userId);
         }
 
         await news.save();
-        await news.populate('likes', 'name email avatar role'); // Populate to ensure UI reflects the user info
+        await news.populate('likes', 'name email avatar role');
 
         res.status(200).json({
             success: true,
             news,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);

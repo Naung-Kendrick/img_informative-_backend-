@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 import CommentModel from "../models/comment.model";
 import ErrorHandler from "../utils/ErrorHandler";
+import CatchAsyncError from "../middlewares/catchAsyncError";
 import { logAudit, sanitizeForLog } from "../utils/AuditLogger";
+import mongoose from "mongoose";
 
-export const createComment = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const createComment = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { newsId } = req.params;
         const { content } = req.body;
-
-        // This is safe because req.user is appended by isAuthenticated middleware
         const authorId = req.user?._id;
 
         if (!content) {
@@ -17,43 +17,37 @@ export const createComment = async (req: Request, res: Response, next: NextFunct
 
         const comment = await CommentModel.create({
             content,
-            newsId: newsId as any,
-            author: authorId as any,
+            newsId: new mongoose.Types.ObjectId(newsId as string),
+            author: authorId,
         });
 
-        // We run populate dynamically right after creation so the Frontend gets the updated name+avatar immediately
         if (comment) {
-            await (comment as any).populate('author', 'name avatar role');
+            await comment.populate('author', 'name avatar role');
         }
 
         res.status(201).json({
             success: true,
             comment,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);
 
-export const getCommentsByNewsId = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const getCommentsByNewsId = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { newsId } = req.params;
-        // Fetch all comments matching News ID, populate authors, limit payload
-        const comments = await CommentModel.find({ newsId })
+        const comments = await CommentModel.find({ newsId: new mongoose.Types.ObjectId(newsId as string) })
             .populate('author', 'name avatar role')
-            .sort({ createdAt: -1 }); // Sort by newest first
+            .sort({ createdAt: -1 });
 
         res.status(200).json({
             success: true,
             comments,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);
 
-export const deleteComment = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const deleteComment = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { commentId } = req.params;
         const currentUserId = req.user?._id;
         const currentUserRole = req.user?.role;
@@ -64,11 +58,11 @@ export const deleteComment = async (req: Request, res: Response, next: NextFunct
             return next(new ErrorHandler("Comment not found", 404));
         }
 
-        // Allow delete only if user is author OR Root Admin (3)
         if (comment.author.toString() !== currentUserId.toString() && currentUserRole !== 3) {
             return next(new ErrorHandler("You are not authorized to delete this comment", 403));
         }
 
+        const beforeData = comment.toObject();
         await comment.deleteOne();
 
         // Audit Log
@@ -77,9 +71,9 @@ export const deleteComment = async (req: Request, res: Response, next: NextFunct
             action: "DELETE",
             resourceType: "Comment",
             resourceId: commentId as string,
-            actorId: req.user?._id,
+            actorId: currentUserId,
             actorName: req.user?.name || "Unknown",
-            before: sanitizeForLog(comment.toObject()),
+            before: sanitizeForLog(beforeData),
             description: `Deleted comment by ${comment.author}: "${comment.content.substring(0, 50)}${comment.content.length > 50 ? '...' : ''}"`
         });
 
@@ -87,13 +81,11 @@ export const deleteComment = async (req: Request, res: Response, next: NextFunct
             success: true,
             message: "Comment deleted successfully"
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);
 
-export const updateComment = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const updateComment = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { commentId } = req.params;
         const { content } = req.body;
         const currentUserId = req.user?._id;
@@ -108,7 +100,6 @@ export const updateComment = async (req: Request, res: Response, next: NextFunct
             return next(new ErrorHandler("Comment not found", 404));
         }
 
-        // Author Check — Root Admin can delete, but shouldn't really edit others' comments
         if (comment.author.toString() !== currentUserId.toString()) {
             return next(new ErrorHandler("You are not authorized to edit this comment", 403));
         }
@@ -124,7 +115,7 @@ export const updateComment = async (req: Request, res: Response, next: NextFunct
                 action: "UPDATE",
                 resourceType: "Comment",
                 resourceId: commentId as string,
-                actorId: req.user?._id,
+                actorId: currentUserId,
                 actorName: req.user?.name || "Unknown",
                 before: { content: oldContent },
                 after: { content: content },
@@ -132,14 +123,11 @@ export const updateComment = async (req: Request, res: Response, next: NextFunct
             });
         }
 
-        // Populate and return
-        await (comment as any).populate('author', 'name avatar role');
+        await comment.populate('author', 'name avatar role');
 
         res.status(200).json({
             success: true,
             comment,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);

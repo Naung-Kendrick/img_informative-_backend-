@@ -1,5 +1,5 @@
 {
-  "name": "expense-api",
+  "name": "taang-land-portal-api",
   "version": "1.0.0",
   "main": "dist/server.js",
   "scripts": {
@@ -12,12 +12,11 @@
     "test:coverage": "vitest run --coverage"
   },
   "keywords": [],
-  "author": "",
+  "author": "Ta'ang Land Federal Unit Government",
   "license": "ISC",
-  "description": "",
+  "description": "Backend API for Ta'ang Land Federal Unit Government Portal",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1002.0",
-    "aws-sdk": "^2.1693.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -29,7 +28,6 @@
     "mongoose": "^9.2.4",
     "multer": "^2.1.1",
     "multer-s3": "^3.0.1",
-    "socket.io": "^4.8.3",
     "typescript": "^5.9.3",
     "zod": "^4.3.6"
   },

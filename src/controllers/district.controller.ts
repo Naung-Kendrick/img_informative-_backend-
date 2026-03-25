@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import DistrictModel from "../models/district.model";
 import ErrorHandler from "../utils/ErrorHandler";
+import CatchAsyncError from "../middlewares/catchAsyncError";
 
 // Create a District
-export const createDistrict = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const createDistrict = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { name, address, phone, mapUrl, officerInCharge } = req.body;
 
         if (!name || !address || !phone) {
@@ -35,28 +36,24 @@ export const createDistrict = async (req: Request, res: Response, next: NextFunc
             success: true,
             district,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || 'Failed to create district', 500));
     }
-};
+);
 
 // Retrieve all Districts
-export const getAllDistricts = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const getAllDistricts = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const districts = await DistrictModel.find().sort({ order: 1, createdAt: 1 });
 
         res.status(200).json({
             success: true,
             districts,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || 'Failed to fetch districts', 500));
     }
-};
+);
 
 // Retrieve ONE District
-export const getDistrictById = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const getDistrictById = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const district = await DistrictModel.findById(req.params.id);
 
         if (!district) {
@@ -67,14 +64,12 @@ export const getDistrictById = async (req: Request, res: Response, next: NextFun
             success: true,
             district,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);
 
 // Update existing District
-export const updateDistrict = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const updateDistrict = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { id } = req.params;
         const updateData = req.body;
 
@@ -93,14 +88,12 @@ export const updateDistrict = async (req: Request, res: Response, next: NextFunc
             success: true,
             district,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || 'Failed to update district', 500));
     }
-};
+);
 
 // Delete District
-export const deleteDistrict = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const deleteDistrict = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { id } = req.params;
 
         const district = await DistrictModel.findByIdAndDelete(id);
@@ -113,14 +106,12 @@ export const deleteDistrict = async (req: Request, res: Response, next: NextFunc
             success: true,
             message: "District deleted successfully.",
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || 'Failed to delete district', 500));
     }
-};
+);
 
 // Reorder Districts
-export const reorderDistricts = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const reorderDistricts = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const districtsToReorder: { id: string; order: number }[] = req.body;
 
         if (!Array.isArray(districtsToReorder) || districtsToReorder.length === 0) {
@@ -137,7 +128,5 @@ export const reorderDistricts = async (req: Request, res: Response, next: NextFu
             success: true,
             message: "Districts reordered successfully.",
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || 'Failed to reorder districts', 500));
     }
-};
+);

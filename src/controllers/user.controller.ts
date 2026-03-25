@@ -6,6 +6,7 @@ import UserModel from "../models/user.model";
 import { uploadS3 } from "../middlewares/upload";
 import { OAuth2Client } from "google-auth-library";
 import { logAudit, sanitizeForLog } from "../utils/AuditLogger";
+import { UserRole } from "../types/roles";
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -120,8 +121,7 @@ export const googleLogin = CatchAsyncError(
                 name,
                 email: normalizedEmail,
                 password: randomPassword,
-                avatar: picture,
-                role: 0,
+                role: UserRole.USER,
             });
         }
 
@@ -255,8 +255,8 @@ export const updateUserPassword = CatchAsyncError(
         const updatedUser = await user.save();
 
         // Important: return user without password in response
-        const userObj = updatedUser.toObject();
-        delete (userObj as any).password;
+        const userObj = updatedUser.toObject() as Partial<IUser>;
+        delete userObj.password;
 
         res.status(201).json({
             success: true,
@@ -295,7 +295,7 @@ export const uploadUserAvatar = [
 // Update user role by admin
 type TUpdateRoleReq = {
     userId: string;
-    role: number;
+    role: UserRole;
 }
 export const updateUserRoleByAdmin = CatchAsyncError(
     async (req: Request, res: Response, next: NextFunction) => {
@@ -316,13 +316,12 @@ export const updateUserRoleByAdmin = CatchAsyncError(
             return next(new ErrorHandler("User not found", 404));
         }
 
-        if (currentUserRole === 2 && user.role >= 2) {
+        if (currentUserRole === UserRole.ADMIN && user.role >= UserRole.ADMIN) {
             return next(new ErrorHandler("You can't change this user role", 403));
         }
 
         // Allow Root_Admin (3) to change any role.
-        // Prevent assigning role >= currentUserRole unless they are Root_Admin (optional logic but handled above partly)
-        if (currentUserRole === 2 && role >= 2) {
+        if (currentUserRole === UserRole.ADMIN && role >= UserRole.ADMIN) {
             return next(new ErrorHandler("You can't promote a user to Admin or Root_Admin", 403));
         }
 
@@ -370,7 +369,7 @@ export const updateUserPwdByAdmin = CatchAsyncError(
             return next(new ErrorHandler("User not found", 404));
         }
 
-        if (currentUserRole === 2 && user.role >= 2) {
+        if (currentUserRole === UserRole.ADMIN && user.role >= UserRole.ADMIN) {
             return next(new ErrorHandler("You can't change this user password", 403));
         }
 
@@ -417,7 +416,7 @@ export const updateUserStatusByAdmin = CatchAsyncError(
         }
 
         // Only Root_Admin (3) can change status as per user request
-        if (currentUserRole !== 3) {
+        if (currentUserRole !== UserRole.ROOT_ADMIN) {
             return next(new ErrorHandler("Only Root Admin can change user status", 403));
         }
 

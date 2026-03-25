@@ -5,7 +5,7 @@ export interface INews extends Document {
     category: string;
     content: string; // The rich HTML from Tiptap
     images: string[];
-    status: "Draft" | "Published";
+    status: "Draft" | "Published" | "Pending";
     author: mongoose.Types.ObjectId; // The User who wrote it
     likes: mongoose.Types.ObjectId[]; // The Users who liked it
     views: number;

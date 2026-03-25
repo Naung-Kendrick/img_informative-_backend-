@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import ContactInfoModel from "../models/contactInfo.model";
 import ErrorHandler from "../utils/ErrorHandler";
+import CatchAsyncError from "../middlewares/catchAsyncError";
 
 // Get Contact Info (There should only be one record)
-export const getContactInfo = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        let contactInfo = await ContactInfoModel.findOne();
+export const getContactInfo = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
+        const contactInfo = await ContactInfoModel.findOne();
 
-        // If none exists, return a default empty object to avoid errors on frontend
         if (!contactInfo) {
             return res.status(200).json({
                 success: true,
@@ -29,24 +29,21 @@ export const getContactInfo = async (req: Request, res: Response, next: NextFunc
             success: true,
             contactInfo,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 500));
     }
-};
+);
 
 // Update or Create Contact Info
-export const updateContactInfo = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        let contactInfo = await ContactInfoModel.findOne();
+export const updateContactInfo = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
+        const existingInfo = await ContactInfoModel.findOne();
+        let contactInfo;
 
-        if (contactInfo) {
-            // Update existing
-            contactInfo = await ContactInfoModel.findByIdAndUpdate(contactInfo._id, req.body, {
+        if (existingInfo) {
+            contactInfo = await ContactInfoModel.findByIdAndUpdate(existingInfo._id, req.body, {
                 returnDocument: 'after',
                 runValidators: true,
             });
         } else {
-            // Create first one
             contactInfo = await ContactInfoModel.create(req.body);
         }
 
@@ -54,7 +51,5 @@ export const updateContactInfo = async (req: Request, res: Response, next: NextF
             success: true,
             contactInfo,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message, 400));
     }
-};
+);

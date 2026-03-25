@@ -1,5 +1,6 @@
 import { model, Schema } from "mongoose";
 import { IUser } from "../types/IUser";
+import { UserRole } from "../types/roles";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -34,7 +35,7 @@ const userSchema: Schema<IUser> = new Schema({
     },
     role: {
         type: Number,
-        default: 0,
+        default: UserRole.USER,
     },
     active: {
         type: Boolean,

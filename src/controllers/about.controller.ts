@@ -1,24 +1,23 @@
 import { Request, Response, NextFunction } from "express";
 import AboutModel from "../models/about.model";
 import ErrorHandler from "../utils/ErrorHandler";
+import CatchAsyncError from "../middlewares/catchAsyncError";
 
 // ── PUBLIC: Get About Content ──────────────────────────────────────
-export const getAboutContent = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const getAboutContent = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const about = await AboutModel.findOne().sort({ createdAt: -1 });
 
         res.status(200).json({
             success: true,
             about: about || null,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || "Failed to fetch about content", 500));
     }
-};
+);
 
 // ── ADMIN: Create or Update About Content ──────────────────────────────────────────────────
-export const saveAboutContent = async (req: Request, res: Response, next: NextFunction) => {
-    try {
+export const saveAboutContent = CatchAsyncError(
+    async (req: Request, res: Response, next: NextFunction) => {
         const { 
             title, description, policy, objective, duty, mainTasks, imageUrl,
             uniformDescription, uniform1Image, uniform1Name, uniform2Image, uniform2Name 
@@ -68,7 +67,5 @@ export const saveAboutContent = async (req: Request, res: Response, next: NextFu
             success: true,
             about,
         });
-    } catch (error: any) {
-        return next(new ErrorHandler(error.message || "Failed to save about content", 500));
     }
-};
+);
